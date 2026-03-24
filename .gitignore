@@ -1,0 +1,18 @@
+# Dados brutos da Receita Federal (multi-GB)
+Estabelecimentos*/
+Simples/
+
+# Dataset final (acima do limite do GitHub)
+dataset_final.csv
+
+# Arquivos temporários
+cell9_output0.png
+
+# Claude Code (não incluir no repositório)
+CLAUDE.md
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
