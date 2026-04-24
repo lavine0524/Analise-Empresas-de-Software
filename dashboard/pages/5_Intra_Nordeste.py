@@ -1,30 +1,19 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from config import (
+    DATASET_PATH, NORDESTE_ESTADOS, NOME_ESTADO,
+    CORES_NE, LAYOUT_BASE, FONTE_DADOS, SUBTITULO_STYLE,
+)
 
 st.set_page_config(page_title="Intra-Nordeste", layout="wide")
 
-DATASET_PATH = "D:/Análise_Empresas_Software/dataset_final.csv"
-
-NORDESTE_ESTADOS = {
-    "Maranhão":    "MA", "Piauí":       "PI", "Ceará":       "CE",
-    "Rio G. Norte":"RN", "Paraíba":     "PB", "Pernambuco":  "PE",
-    "Alagoas":     "AL", "Sergipe":     "SE", "Bahia":       "BA",
-}
-NOME_ESTADO = {v: k for k, v in NORDESTE_ESTADOS.items()}
-
-CORES_NE = ["#e05c2b", "#f97316", "#eab308", "#22c55e",
-            "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#64748b"]
-
 COLUNAS = ["uf", "situacao_cadastral", "opcao_simples", "data_inicio_atividade"]
-
-LAYOUT_BASE = dict(
-    plot_bgcolor="white", paper_bgcolor="white", font_color="#1a1a2e",
-    xaxis=dict(gridcolor="#e5e7eb", linecolor="#e5e7eb"),
-    yaxis=dict(gridcolor="#e5e7eb", linecolor="#e5e7eb"),
-    hoverlabel=dict(font_size=15, bgcolor="white", bordercolor="#e5e7eb"),
-)
 
 
 @st.cache_data
@@ -40,9 +29,16 @@ def carregar_dados() -> pd.DataFrame:
 df = carregar_dados()
 df["estado_nome"] = df["uf"].map(NOME_ESTADO)
 
-st.title("🌵 Análise Intra-Nordeste")
+st.title("Análise Intra-Nordeste")
+st.markdown(
+    f'<p style="{SUBTITULO_STYLE}">'
+    'Comparativo entre os 9 estados nordestinos em volume de empresas, taxa de atividade '
+    'e trajetória de crescimento relativo. Volume e saúde do ecossistema nem sempre coincidem.'
+    '</p>',
+    unsafe_allow_html=True,
+)
 
-with st.expander("🔧 Filtros", expanded=True):
+with st.expander("Filtros", expanded=True):
     estados_sel = st.multiselect(
         "Estados", list(NORDESTE_ESTADOS.keys()),
         default=list(NORDESTE_ESTADOS.keys()),
@@ -56,7 +52,7 @@ if df_f.empty:
     st.stop()
 
 st.markdown("---")
-st.subheader("Comparativo entre estados nordestinos")
+st.subheader("Comparativo entre estados nordestinos", anchor=False)
 
 agg = (
     df_f.groupby("estado_nome")
@@ -65,7 +61,7 @@ agg = (
          simples=("opcao_simples", lambda x: (x == "S").sum()))
     .reset_index()
 )
-agg["pct_ativa"]  = (agg["ativas"]  / agg["total"] * 100).round(1)
+agg["pct_ativa"]   = (agg["ativas"]  / agg["total"] * 100).round(1)
 agg["pct_simples"] = (agg["simples"] / agg["total"] * 100).round(1)
 
 col_n, col_at, col_si = st.columns(3)
@@ -76,11 +72,12 @@ with col_n:
     fig = px.bar(d, x="total", y="estado_nome", orientation="h",
                  color="cor", color_discrete_map="identity",
                  labels={"total": "Nº de empresas", "estado_nome": ""},
-                 text="total", title="Volume total")
+                 text="total", title="Volume de empresas")
     fig.update_traces(textposition="outside")
     fig.update_layout(showlegend=False, **LAYOUT_BASE)
-    fig.update_xaxes(range=[0, d["total"].max() * 1.2])
+    fig.update_xaxes(range=[0, d["total"].max() * 1.2], tickformat="~s")
     st.plotly_chart(fig, use_container_width=True)
+    st.caption(FONTE_DADOS)
 
 with col_at:
     d = agg.sort_values("pct_ativa")
@@ -88,11 +85,12 @@ with col_at:
     fig = px.bar(d, x="pct_ativa", y="estado_nome", orientation="h",
                  color="cor", color_discrete_map="identity",
                  labels={"pct_ativa": "% ativas", "estado_nome": ""},
-                 text="pct_ativa", title="Taxa de atividade")
+                 text="pct_ativa", title="Taxa de empresas ativas (%)")
     fig.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
     fig.update_layout(showlegend=False, **LAYOUT_BASE)
     fig.update_xaxes(range=[0, 100])
     st.plotly_chart(fig, use_container_width=True)
+    st.caption(FONTE_DADOS)
 
 with col_si:
     d = agg.sort_values("pct_simples")
@@ -100,12 +98,14 @@ with col_si:
     fig = px.bar(d, x="pct_simples", y="estado_nome", orientation="h",
                  color="cor", color_discrete_map="identity",
                  labels={"pct_simples": "% Simples", "estado_nome": ""},
-                 text="pct_simples", title="% no Simples Nacional")
+                 text="pct_simples", title="Adesão ao Simples Nacional (%)")
     fig.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
     fig.update_layout(showlegend=False, **LAYOUT_BASE)
     fig.update_xaxes(range=[0, 100])
     st.plotly_chart(fig, use_container_width=True)
+    st.caption(FONTE_DADOS)
 
+# insight dinâmico — computado do agg atual
 if len(agg) >= 2:
     ne_avg_ativa = round(agg["ativas"].sum() / agg["total"].sum() * 100, 1)
     top_ativa    = agg.loc[agg["pct_ativa"].idxmax()]
@@ -121,16 +121,19 @@ if len(agg) >= 2:
         f' enquanto <strong>{bot_ativa["estado_nome"]}</strong> tem a menor taxa'
         f' (<strong>{bot_ativa["pct_ativa"]}%</strong>) — gap de <strong>{gap_vol_ativa} pp</strong>'
         f' dentro de uma mesma região. <strong>{top_vol["estado_nome"]}</strong> lidera em volume'
-        f' mas não necessariamente em saúde do ecossistema (média regional: {ne_avg_ativa}%).</span>'
+        f' (média regional: {ne_avg_ativa}%).</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
 
 st.markdown("---")
-st.subheader("Crescimento relativo 2015–2024 (base 2015 = 100)")
+st.subheader("Crescimento relativo 2015–2024 (base 2015 = 100)", anchor=False)
 
-with st.expander("🔧 Filtros — período", expanded=True):
-    periodo = st.slider("Período", 2010, 2024, (2015, 2024))
+ano_min_data = int(df_f["ano_abertura"].min())
+ano_max_data = int(df_f["ano_abertura"].max())
+
+with st.expander("Período de análise", expanded=True):
+    periodo = st.slider("Período", ano_min_data, ano_max_data, (max(ano_min_data, 2015), ano_max_data))
 
 df_p = df_f[(df_f["ano_abertura"] >= periodo[0]) & (df_f["ano_abertura"] <= periodo[1])]
 serie = (
@@ -165,6 +168,7 @@ fig_rel.update_layout(
     **LAYOUT_BASE,
 )
 st.plotly_chart(fig_rel, use_container_width=True)
+st.caption(FONTE_DADOS)
 
 # ── Tabela de crescimento ─────────────────────────────────────────────────────
 rows_tab = []
@@ -179,9 +183,10 @@ for nome in estados_sel:
 
 if rows_tab:
     st.markdown("#### Crescimento acumulado")
-    df_tab = pd.DataFrame(rows_tab)
+    df_tab     = pd.DataFrame(rows_tab)
+    df_tab_raw = df_tab.copy()
 
-    def fmt(v):
+    def fmt(v: float) -> str:
         c = "#16a34a" if v >= 0 else "#dc2626"
         return f'<span style="color:{c};font-weight:600">{"+" if v>=0 else ""}{v:.1f}%</span>'
 
@@ -196,19 +201,28 @@ if rows_tab:
         unsafe_allow_html=True,
     )
 
-st.markdown(
-    '<div style="border-left:4px solid #e05c2b; background:#fff8f5;'
-    ' padding:16px 20px; border-radius:6px; margin-top:16px;">'
-    '<span style="font-weight:700; color:#1a1a2e;">Insight: </span>'
-    '<span style="color:#374151;">Bahia lidera em volume mas tem a pior taxa de atividade (50%).'
-    ' Piauí tem a maior taxa de atividade (69,2%). A Paraíba tem 63,7% de atividade e 48% no'
-    ' Simples — posição intermediária sólida.</span>'
-    '</div>',
-    unsafe_allow_html=True,
-)
+    # insight dinâmico baseado no agg filtrado e na tabela de crescimento
+    if len(agg) >= 2:
+        med_ativa = agg["pct_ativa"].median()
+        agg_copy = agg.copy()
+        agg_copy["dist_med"] = (agg_copy["pct_ativa"] - med_ativa).abs()
+        mid_state = agg_copy.loc[agg_copy["dist_med"].idxmin()]
+        st.markdown(
+            f'<div style="border-left:4px solid #e05c2b; background:#fff8f5;'
+            f' padding:16px 20px; border-radius:6px; margin-top:16px;">'
+            f'<span style="font-weight:700; color:#1a1a2e;">Insight: </span>'
+            f'<span style="color:#374151;">'
+            f'<strong>{top_vol["estado_nome"]}</strong> lidera em volume mas tem taxa de'
+            f' atividade de <strong>{top_vol["pct_ativa"]:.1f}%</strong>.'
+            f' <strong>{top_ativa["estado_nome"]}</strong> tem a maior taxa de atividade'
+            f' (<strong>{top_ativa["pct_ativa"]:.1f}%</strong>).'
+            f' <strong>{mid_state["estado_nome"]}</strong> apresenta posição intermediária'
+            f' ({mid_state["pct_ativa"]:.1f}% de atividade,'
+            f' {mid_state["pct_simples"]:.1f}% no Simples).</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
-if rows_tab:
-    df_tab_raw = pd.DataFrame(rows_tab)
     fastest = df_tab_raw.loc[df_tab_raw["Crescimento (%)"].idxmax()]
     slowest = df_tab_raw.loc[df_tab_raw["Crescimento (%)"].idxmin()]
     ano_ini, ano_fim = str(periodo[0]), str(periodo[1])

@@ -1,44 +1,21 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from config import (
+    DATASET_PATH, REGIOES, UF_REGIAO,
+    CORES, COR_NE, COR_OUTR,
+    MAPA_SITUACAO, LAYOUT_BASE, FONTE_DADOS, SUBTITULO_STYLE,
+)
 
 st.set_page_config(page_title="Distribuição Geográfica", layout="wide")
-
-DATASET_PATH = "D:/Análise_Empresas_Software/dataset_final.csv"
-
-REGIOES = {
-    "Norte":       ["AM", "RR", "AP", "PA", "TO", "RO", "AC"],
-    "Nordeste":    ["MA", "PI", "CE", "RN", "PB", "PE", "AL", "SE", "BA"],
-    "Centro-Oeste":["MT", "MS", "GO", "DF"],
-    "Sudeste":     ["SP", "RJ", "MG", "ES"],
-    "Sul":         ["PR", "SC", "RS"],
-}
-UF_REGIAO = {uf: reg for reg, ufs in REGIOES.items() for uf in ufs}
-
-CORES_PIZZA = {
-    "Nordeste":     "#e05c2b",
-    "Sudeste":      "#2563eb",
-    "Sul":          "#16a34a",
-    "Centro-Oeste": "#ca8a04",
-    "Norte":        "#7c3aed",
-}
-COR_NE   = "#e05c2b"
-COR_OUTR = "#94a3b8"
-
-MAPA_SITUACAO = {"01": "Nula", "02": "Ativa", "03": "Suspensa", "04": "Inapta", "08": "Baixada"}
 
 COLUNAS = ["uf", "situacao_cadastral", "cnae_fiscal_principal",
            "municipio", "opcao_simples", "opcao_mei",
            "correio_eletronico", "telefone1"]
-
-LAYOUT_BASE = dict(
-    plot_bgcolor="white", paper_bgcolor="white",
-    font_color="#1a1a2e",
-    xaxis=dict(gridcolor="#e5e7eb", linecolor="#e5e7eb"),
-    yaxis=dict(gridcolor="#e5e7eb", linecolor="#e5e7eb"),
-    margin=dict(l=10, r=10, t=40, b=10),
-    hoverlabel=dict(font_size=15, bgcolor="white", bordercolor="#e5e7eb"),
-)
 
 
 @st.cache_data
@@ -52,9 +29,17 @@ def carregar_dados() -> pd.DataFrame:
 
 df = carregar_dados()
 
-st.title("🗺️ Distribuição Geográfica")
+st.title("Distribuição Geográfica")
+st.markdown(
+    f'<p style="{SUBTITULO_STYLE}">'
+    'Mapeamento das empresas de software por estado e região brasileira. '
+    'O Nordeste concentra ~8% do total apesar de 28% da população — '
+    'com forte hiperprimazia das capitais estaduais.'
+    '</p>',
+    unsafe_allow_html=True,
+)
 
-with st.expander("🔧 Filtros", expanded=True):
+with st.expander("Filtros", expanded=True):
     c1, c2 = st.columns(2)
     with c1:
         opts_sit = sorted(df["situacao_nome"].dropna().unique().tolist())
@@ -78,13 +63,15 @@ por_uf["regiao"] = por_uf["uf"].map(UF_REGIAO)
 
 fig1 = px.bar(
     por_uf, x="total", y="uf", orientation="h",
-    title="Empresas por UF",
+    title="Distribuição de empresas de software por estado",
     color="cor", color_discrete_map="identity",
     hover_data={"regiao": True, "cor": False},
-    labels={"total": "Nº de empresas", "uf": "UF", "regiao": "Região"},
+    labels={"total": "Nº de empresas", "uf": "Estado", "regiao": "Região"},
 )
 fig1.update_layout(showlegend=False, height=580, **LAYOUT_BASE)
+fig1.update_xaxes(tickformat="~s")
 st.plotly_chart(fig1, use_container_width=True)
+st.caption(FONTE_DADOS)
 
 sp_total = int(df_f[df_f["uf"] == "SP"].shape[0]) if "Sudeste" in reg_sel else 0
 ne_total = int(df_f[df_f["regiao"] == "Nordeste"].shape[0]) if "Nordeste" in reg_sel else 0
@@ -110,14 +97,20 @@ with col_pie:
     por_reg = df_f.groupby("regiao").size().reset_index(name="total")
     fig2 = px.pie(
         por_reg, names="regiao", values="total",
-        title="Concentração por região",
-        color="regiao", color_discrete_map=CORES_PIZZA,
+        title="Participação regional no ecossistema de software",
+        color="regiao", color_discrete_map=CORES,
         hole=0.35,
     )
     fig2.update_traces(textposition="outside", textinfo="percent+label")
-    fig2.update_layout(paper_bgcolor="white", font_color="#1a1a2e",
-                       showlegend=False, margin=dict(l=10, r=10, t=40, b=10))
+    fig2.update_layout(
+        paper_bgcolor="white",
+        font=dict(size=13, color="#1a1a2e"),
+        showlegend=True,
+        legend=dict(orientation="v", x=1.02, y=0.5),
+        margin=dict(l=10, r=120, t=40, b=10),
+    )
     st.plotly_chart(fig2, use_container_width=True)
+    st.caption(FONTE_DADOS)
 
 # ── Gráfico 3: Concentração no maior município por UF ───────────────────────
 with col_cap:
@@ -134,40 +127,33 @@ with col_cap:
 
     fig3 = px.bar(
         conc, x="pct", y="uf", orientation="h",
-        title="% de empresas no maior município",
+        title="Concentração no principal município (% do total estadual)",
         color="cor", color_discrete_map="identity",
-        labels={"pct": "% no maior município", "uf": "UF"},
+        labels={"pct": "% no maior município", "uf": "Estado"},
     )
     fig3.update_layout(showlegend=False, **LAYOUT_BASE)
     st.plotly_chart(fig3, use_container_width=True)
+    st.caption(FONTE_DADOS)
 
-ne_ufs_present = [u for u in REGIOES.get("Nordeste", []) if u in conc["uf"].values]
-sul_ufs_present = [u for u in REGIOES.get("Sul", []) if u in conc["uf"].values]
-ne_conc_avg = round(conc[conc["uf"].isin(ne_ufs_present)]["pct"].mean(), 1) if ne_ufs_present else None
+ne_ufs_present  = [u for u in REGIOES.get("Nordeste", []) if u in conc["uf"].values]
+sul_ufs_present = [u for u in REGIOES.get("Sul",      []) if u in conc["uf"].values]
+ne_conc_avg  = round(conc[conc["uf"].isin(ne_ufs_present)]["pct"].mean(),  1) if ne_ufs_present  else None
 sul_conc_avg = round(conc[conc["uf"].isin(sul_ufs_present)]["pct"].mean(), 1) if sul_ufs_present else None
 
 if ne_conc_avg and sul_conc_avg:
+    se_row = conc[conc["uf"] == "SE"]
+    ce_row = conc[conc["uf"] == "CE"]
+    se_pct = f"{se_row['pct'].values[0]:.1f}%" if len(se_row) > 0 else "—"
+    ce_pct = f"{ce_row['pct'].values[0]:.1f}%" if len(ce_row) > 0 else "—"
     st.markdown(
         f'<div style="border-left:4px solid #e05c2b; background:#fff8f5;'
         f' padding:16px 20px; border-radius:6px; margin-top:8px;">'
         f'<span style="font-weight:700; color:#1a1a2e;">Insight: </span>'
         f'<span style="color:#374151;">Estados nordestinos concentram em média <strong>{ne_conc_avg}%</strong>'
         f' das empresas no maior município, contra <strong>{sul_conc_avg}%</strong> no Sul —'
-        f' Aracaju/SE ({conc[conc["uf"]=="SE"]["pct"].values[0]:.1f}%) e'
-        f' Fortaleza/CE ({conc[conc["uf"]=="CE"]["pct"].values[0]:.1f}%) lideram a concentração.'
+        f' Aracaju/SE ({se_pct}) e Fortaleza/CE ({ce_pct}) lideram a concentração.'
         f' Isso indica ausência de ecossistema de software fora das capitais.</span>'
         f'</div>',
-        unsafe_allow_html=True,
-    )
-else:
-    st.markdown(
-        '<div style="border-left:4px solid #e05c2b; background:#fff8f5;'
-        ' padding:16px 20px; border-radius:6px; margin-top:8px;">'
-        '<span style="font-weight:700; color:#1a1a2e;">Insight: </span>'
-        '<span style="color:#374151;">Estados nordestinos têm altíssima concentração nas capitais '
-        '(Aracaju/SE: 78,8%; Fortaleza/CE: 72,1%), indicando ausência de ecossistema de software '
-        'fora das capitais regionais.</span>'
-        '</div>',
         unsafe_allow_html=True,
     )
 

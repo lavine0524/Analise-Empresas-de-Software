@@ -1,44 +1,19 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from config import (
+    DATASET_PATH, REGIOES, UF_REGIAO,
+    CORES, MAPA_CNAE, LAYOUT_BASE, FONTE_DADOS, SUBTITULO_STYLE,
+)
 
 st.set_page_config(page_title="Perfil Setorial", layout="wide")
 
-DATASET_PATH = "D:/Análise_Empresas_Software/dataset_final.csv"
-
-REGIOES = {
-    "Norte":       ["AM", "RR", "AP", "PA", "TO", "RO", "AC"],
-    "Nordeste":    ["MA", "PI", "CE", "RN", "PB", "PE", "AL", "SE", "BA"],
-    "Centro-Oeste":["MT", "MS", "GO", "DF"],
-    "Sudeste":     ["SP", "RJ", "MG", "ES"],
-    "Sul":         ["PR", "SC", "RS"],
-}
-UF_REGIAO = {uf: reg for reg, ufs in REGIOES.items() for uf in ufs}
-
-CORES = {
-    "Nordeste":     "#e05c2b",
-    "Sudeste":      "#2563eb",
-    "Sul":          "#16a34a",
-    "Norte":        "#7c3aed",
-    "Centro-Oeste": "#ca8a04",
-}
-
-MAPA_CNAE = {
-    "6201500": "Desenv. sob encomenda", "6201501": "Desenv. sob encomenda",
-    "6202300": "Software customizável",  "6203100": "Software não-customizável",
-    "6204000": "Consultoria em TI",      "6209100": "Suporte técnico/TI",
-    "6201502": "Web design",
-}
-
 COLUNAS = ["uf", "situacao_cadastral", "cnae_fiscal_principal",
            "opcao_simples", "correio_eletronico", "telefone1"]
-
-LAYOUT_BASE = dict(
-    plot_bgcolor="white", paper_bgcolor="white", font_color="#1a1a2e",
-    xaxis=dict(gridcolor="#e5e7eb", linecolor="#e5e7eb"),
-    yaxis=dict(gridcolor="#e5e7eb", linecolor="#e5e7eb"),
-    hoverlabel=dict(font_size=15, bgcolor="white", bordercolor="#e5e7eb"),
-)
 
 
 @st.cache_data
@@ -58,26 +33,39 @@ def carregar_dados() -> pd.DataFrame:
 
 df = carregar_dados()
 
-st.title("🏭 Perfil Setorial")
+st.title("Perfil Setorial")
+st.markdown(
+    f'<p style="{SUBTITULO_STYLE}">'
+    'Comparação do mix de segmentos CNAE, formalização digital e regime tributário entre duas regiões. '
+    'Use os seletores para explorar qualquer par de regiões do Brasil.'
+    '</p>',
+    unsafe_allow_html=True,
+)
 
-with st.expander("🔧 Filtros", expanded=True):
+with st.expander("Filtros", expanded=True):
     c1, c2 = st.columns(2)
+    regioes_list = list(REGIOES.keys())
     with c1:
-        reg_a = st.selectbox("Região A", list(REGIOES.keys()),
-                             index=list(REGIOES.keys()).index("Nordeste"))
+        reg_a = st.selectbox("Região A", regioes_list,
+                             index=regioes_list.index("Nordeste"))
     with c2:
-        reg_b = st.selectbox("Região B", list(REGIOES.keys()),
-                             index=list(REGIOES.keys()).index("Sudeste"))
+        reg_b = st.selectbox("Região B", regioes_list,
+                             index=regioes_list.index("Sudeste"))
 
 df_a = df[df["regiao"] == reg_a]
 df_b = df[df["regiao"] == reg_b]
+
+if df_a.empty or df_b.empty:
+    st.warning("Dados insuficientes para uma das regiões selecionadas.")
+    st.stop()
+
 cor_a = CORES.get(reg_a, "#e05c2b")
 cor_b = CORES.get(reg_b, "#2563eb")
 
 st.markdown("---")
 
 # ── Gráfico 1: Distribuição por CNAE ─────────────────────────────────────────
-st.subheader("Distribuição percentual por CNAE")
+st.subheader("Distribuição percentual por CNAE", anchor=False)
 
 dist_a = df_a["cnae_label"].value_counts(normalize=True).mul(100).rename(reg_a)
 dist_b = df_b["cnae_label"].value_counts(normalize=True).mul(100).rename(reg_b)
@@ -90,31 +78,40 @@ fig_cnae = px.bar(
     dist_melt, x="Percentual", y="cnae_label", color="Região",
     barmode="group", orientation="h",
     color_discrete_map={reg_a: cor_a, reg_b: cor_b},
-    labels={"cnae_label": "", "Percentual": "% das empresas"},
+    labels={"cnae_label": "Segmento", "Percentual": "% das empresas"},
     text="Percentual",
 )
 fig_cnae.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
 fig_cnae.update_layout(height=380, legend=dict(orientation="h", y=1.08), **LAYOUT_BASE)
 fig_cnae.update_xaxes(range=[0, dist_melt["Percentual"].max() * 1.2])
 st.plotly_chart(fig_cnae, use_container_width=True)
+st.caption(FONTE_DADOS)
 
+# insight dinâmico: CNAE com maior diferença entre regiões
 dist["diff_abs"] = (dist[reg_a] - dist[reg_b]).abs()
+dist["diff_ab"]  = dist[reg_a] - dist[reg_b]
 if not dist.empty:
-    max_row = dist.loc[dist["diff_abs"].idxmax()]
-    val_a = round(max_row[reg_a], 1)
-    val_b = round(max_row[reg_b], 1)
+    max_row  = dist.loc[dist["diff_abs"].idxmax()]
+    val_a    = round(max_row[reg_a], 1)
+    val_b    = round(max_row[reg_b], 1)
     maior_reg = reg_a if val_a > val_b else reg_b
     menor_reg = reg_b if val_a > val_b else reg_a
     maior_val = max(val_a, val_b)
     menor_val = min(val_a, val_b)
+    # segmento onde reg_a tem maior vantagem sobre reg_b
+    adv_row  = dist.loc[dist["diff_ab"].idxmax()]
+    dom_a    = dist.loc[dist[reg_a].idxmax()]
+    dom_b    = dist.loc[dist[reg_b].idxmax()]
     st.markdown(
         f'<div style="border-left:4px solid #ca8a04; background:#fefce8;'
         f' padding:14px 18px; border-radius:6px; margin:8px 0;">'
         f'<span style="font-weight:700; color:#1a1a2e;">Maior diferença de mix: </span>'
         f'<span style="color:#374151;"><strong>{max_row["cnae_label"]}</strong> é o segmento'
-        f' com maior divergência entre as regiões — <strong>{maior_reg}</strong> ({maior_val}%)'
-        f' vs <strong>{menor_reg}</strong> ({menor_val}%). Diferenças de mix refletem'
-        f' distintas demandas locais e estágios de maturidade do ecossistema regional.</span>'
+        f' com maior divergência — <strong>{maior_reg}</strong> ({maior_val:.1f}%)'
+        f' vs <strong>{menor_reg}</strong> ({menor_val:.1f}%). '
+        f'O segmento dominante em {reg_a} é <em>{dom_a["cnae_label"]}</em>'
+        f' ({dom_a[reg_a]:.1f}%) e em {reg_b} é <em>{dom_b["cnae_label"]}</em>'
+        f' ({dom_b[reg_b]:.1f}%).</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -126,7 +123,7 @@ st.markdown(
     '</p>', unsafe_allow_html=True,
 )
 
-# ── Gráficos 2a e 2b: Formalização (só A vs B) ───────────────────────────────
+# ── Gráficos 2a e 2b: Formalização ──────────────────────────────────────────
 col_email, col_tel = st.columns(2)
 
 pct_email_a = round(df_a["tem_email"].mean() * 100, 1)
@@ -135,7 +132,7 @@ pct_tel_a   = round(df_a["tem_telefone"].mean() * 100, 1)
 pct_tel_b   = round(df_b["tem_telefone"].mean() * 100, 1)
 
 with col_email:
-    st.subheader("% com e-mail cadastrado")
+    st.subheader("% com e-mail cadastrado", anchor=False)
     df_em = pd.DataFrame({"Região": [reg_a, reg_b], "valor": [pct_email_a, pct_email_b],
                            "cor": [cor_a, cor_b]}).sort_values("valor")
     fig_em = px.bar(df_em, x="valor", y="Região", orientation="h",
@@ -146,9 +143,10 @@ with col_email:
     fig_em.update_layout(showlegend=False, **LAYOUT_BASE)
     fig_em.update_xaxes(range=[0, max(pct_email_a, pct_email_b) * 1.25])
     st.plotly_chart(fig_em, use_container_width=True)
+    st.caption(FONTE_DADOS)
 
 with col_tel:
-    st.subheader("% com telefone cadastrado")
+    st.subheader("% com telefone cadastrado", anchor=False)
     df_tel = pd.DataFrame({"Região": [reg_a, reg_b], "valor": [pct_tel_a, pct_tel_b],
                             "cor": [cor_a, cor_b]}).sort_values("valor")
     fig_tel = px.bar(df_tel, x="valor", y="Região", orientation="h",
@@ -159,6 +157,7 @@ with col_tel:
     fig_tel.update_layout(showlegend=False, **LAYOUT_BASE)
     fig_tel.update_xaxes(range=[0, max(pct_tel_a, pct_tel_b) * 1.25])
     st.plotly_chart(fig_tel, use_container_width=True)
+    st.caption(FONTE_DADOS)
 
 gap_email = abs(pct_email_a - pct_email_b)
 gap_tel   = abs(pct_tel_a   - pct_tel_b)
@@ -180,7 +179,7 @@ st.markdown(
 st.markdown("---")
 
 # ── Gráfico 3: Simples Nacional ───────────────────────────────────────────────
-st.subheader("Composição por regime tributário")
+st.subheader("Composição por regime tributário", anchor=False)
 
 rows_simp = []
 for reg, dfreg in [(reg_a, df_a), (reg_b, df_b)]:
@@ -204,14 +203,33 @@ fig_simp.update_traces(texttemplate="%{text:.1f}%", textposition="inside", insid
 fig_simp.update_layout(legend=dict(orientation="h", y=1.08), **LAYOUT_BASE)
 fig_simp.update_yaxes(range=[0, 105])
 st.plotly_chart(fig_simp, use_container_width=True)
+st.caption(FONTE_DADOS)
 
-st.markdown(
-    '<div style="border-left:4px solid #e05c2b; background:#fff8f5;'
-    ' padding:16px 20px; border-radius:6px; margin-top:8px;">'
-    '<span style="font-weight:700; color:#1a1a2e;">Insight: </span>'
-    '<span style="color:#374151;">O Nordeste tem mais <em>Software customizável</em> proporcionalmente'
-    ' (13,4% vs. 8,2% no Sudeste), mas <em>Suporte técnico/TI</em> e'
-    ' <em>Desenvolvimento sob encomenda</em> — sem escala — dominam o ecossistema.</span>'
-    '</div>',
-    unsafe_allow_html=True,
-)
+# insight dinâmico baseado nas regiões selecionadas
+simp_a = next((r["Valor"] for r in rows_simp if r["Região"] == reg_a and r["Categoria"] == "Simples Nacional"), None)
+simp_b = next((r["Valor"] for r in rows_simp if r["Região"] == reg_b and r["Categoria"] == "Simples Nacional"), None)
+if simp_a is not None and simp_b is not None:
+    maior_simp = reg_a if simp_a > simp_b else reg_b
+    menor_simp = reg_b if simp_a > simp_b else reg_a
+    val_maior  = max(simp_a, simp_b)
+    val_menor  = min(simp_a, simp_b)
+    # CNAE com maior diferença proporcional a favor de reg_a
+    adv_cnae = dist.loc[dist["diff_ab"].idxmax()] if not dist.empty else None
+    adv_text = ""
+    if adv_cnae is not None and adv_cnae["diff_ab"] > 0:
+        adv_text = (
+            f" <strong>{reg_a}</strong> tem proporcionalmente mais"
+            f" <em>{adv_cnae['cnae_label']}</em>"
+            f" ({adv_cnae[reg_a]:.1f}% vs. {adv_cnae[reg_b]:.1f}% em {reg_b})."
+        )
+    st.markdown(
+        f'<div style="border-left:4px solid #e05c2b; background:#fff8f5;'
+        f' padding:16px 20px; border-radius:6px; margin-top:8px;">'
+        f'<span style="font-weight:700; color:#1a1a2e;">Perfil setorial: </span>'
+        f'<span style="color:#374151;">{adv_text}'
+        f' <strong>{maior_simp}</strong> tem maior adesão ao Simples Nacional'
+        f' ({val_maior:.1f}% vs. {val_menor:.1f}% em {menor_simp}),'
+        f' refletindo predominância de micro e pequenas empresas no ecossistema regional.</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
