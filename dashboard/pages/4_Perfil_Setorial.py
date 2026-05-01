@@ -19,12 +19,8 @@ def carregar_dados() -> pd.DataFrame:
     df = df[df["uf"] != "EX"]
     df["regiao"] = df["uf"].map(UF_REGIAO)
     df["cnae_label"] = df["cnae_fiscal_principal"].map(MAPA_CNAE).fillna("Outros")
-    df["tem_email"] = (
-        df["correio_eletronico"].notna() & (df["correio_eletronico"].str.strip() != "")
-    )
-    df["tem_telefone"] = (
-        df["telefone1"].notna() & (df["telefone1"].str.strip() != "")
-    )
+    df["tem_email"] = df["correio_eletronico"].fillna("").str.strip() != ""
+    df["tem_telefone"] = df["telefone1"].fillna("").str.strip() != ""
     return df
 
 
