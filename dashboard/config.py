@@ -1,7 +1,6 @@
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
-DATASET_PATH = ROOT / "dataset_final.csv"
+DATASET_PATH = Path(__file__).parent / "dataset_final.parquet"
 
 REGIOES: dict[str, list[str]] = {
     "Norte":        ["AM", "RR", "AP", "PA", "TO", "RO", "AC"],

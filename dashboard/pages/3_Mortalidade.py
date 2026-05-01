@@ -20,7 +20,7 @@ COLUNAS = ["uf", "situacao_cadastral", "data_inicio_atividade",
 
 @st.cache_data
 def carregar_dados() -> pd.DataFrame:
-    df = pd.read_csv(DATASET_PATH, usecols=COLUNAS, dtype=str)
+    df = pd.read_parquet(DATASET_PATH, columns=COLUNAS)
     df = df[df["uf"] != "EX"]
     df["regiao"] = df["uf"].map(UF_REGIAO)
     df["ano_abertura"] = pd.to_numeric(

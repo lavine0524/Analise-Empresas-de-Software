@@ -18,7 +18,7 @@ COLUNAS = ["uf", "situacao_cadastral", "opcao_simples", "data_inicio_atividade"]
 
 @st.cache_data
 def carregar_dados() -> pd.DataFrame:
-    df = pd.read_csv(DATASET_PATH, usecols=COLUNAS, dtype=str)
+    df = pd.read_parquet(DATASET_PATH, columns=COLUNAS)
     df = df[df["uf"].isin(NORDESTE_ESTADOS.values())]
     df["ano_abertura"] = pd.to_numeric(
         df["data_inicio_atividade"].str[:4], errors="coerce"

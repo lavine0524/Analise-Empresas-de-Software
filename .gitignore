@@ -2,8 +2,11 @@
 Estabelecimentos*/
 Simples/
 
-# Dataset final (acima do limite do GitHub)
+# Datasets intermediários e finais em CSV
 dataset_final.csv
+software_brasil_completo.csv
+software_estabelecimentos.csv
+simples_software.csv
 
 # Arquivos temporários
 cell9_output0.png
@@ -16,3 +19,6 @@ CLAUDE.md
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# Ambiente
+.env

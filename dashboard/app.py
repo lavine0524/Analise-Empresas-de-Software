@@ -29,7 +29,7 @@ with st.sidebar:
 def carregar_kpis() -> tuple:
     """Carrega colunas mínimas e calcula os 5 KPIs da home."""
     colunas = ["uf", "situacao_cadastral", "data_inicio_atividade", "data_situacao_cadastral"]
-    df = pd.read_csv(DATASET_PATH, usecols=colunas, dtype=str)
+    df = pd.read_parquet(DATASET_PATH, columns=colunas)
     df = df[df["uf"] != "EX"]
     df["regiao"] = df["uf"].map(UF_REGIAO)
 
