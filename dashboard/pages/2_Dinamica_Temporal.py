@@ -6,18 +6,18 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from config import (
-    DATASET_PATH, REGIOES, UF_REGIAO,
+    REGIOES, UF_REGIAO,
     CORES, LAYOUT_BASE, FONTE_DADOS, SUBTITULO_STYLE,
 )
 
-st.set_page_config(page_title="Dinâmica Temporal", layout="wide")
+DATA_PATH = Path(__file__).parent.parent / "dataset_final.parquet"
 
-COLUNAS = ["uf", "situacao_cadastral", "data_inicio_atividade"]
+st.set_page_config(page_title="Dinâmica Temporal", layout="wide")
 
 
 @st.cache_data
 def carregar_dados() -> pd.DataFrame:
-    df = pd.read_parquet(DATASET_PATH, columns=COLUNAS)
+    df = pd.read_parquet(DATA_PATH)
     df = df[df["uf"] != "EX"]
     df["regiao"] = df["uf"].map(UF_REGIAO)
     df["ano_abertura"] = pd.to_numeric(

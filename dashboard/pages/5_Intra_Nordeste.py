@@ -7,18 +7,18 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from config import (
-    DATASET_PATH, NORDESTE_ESTADOS, NOME_ESTADO,
+    NORDESTE_ESTADOS, NOME_ESTADO,
     CORES_NE, LAYOUT_BASE, FONTE_DADOS, SUBTITULO_STYLE,
 )
 
-st.set_page_config(page_title="Intra-Nordeste", layout="wide")
+DATA_PATH = Path(__file__).parent.parent / "dataset_final.parquet"
 
-COLUNAS = ["uf", "situacao_cadastral", "opcao_simples", "data_inicio_atividade"]
+st.set_page_config(page_title="Intra-Nordeste", layout="wide")
 
 
 @st.cache_data
 def carregar_dados() -> pd.DataFrame:
-    df = pd.read_parquet(DATASET_PATH, columns=COLUNAS)
+    df = pd.read_parquet(DATA_PATH)
     df = df[df["uf"].isin(NORDESTE_ESTADOS.values())]
     df["ano_abertura"] = pd.to_numeric(
         df["data_inicio_atividade"].str[:4], errors="coerce"

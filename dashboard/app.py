@@ -1,6 +1,9 @@
+from pathlib import Path
 import pandas as pd
 import streamlit as st
-from config import DATASET_PATH, FONTE_DADOS, UF_REGIAO, SUBTITULO_STYLE, fmt_br
+from config import FONTE_DADOS, UF_REGIAO, SUBTITULO_STYLE, fmt_br
+
+DATA_PATH = Path(__file__).parent / "dataset_final.parquet"
 
 st.set_page_config(
     page_title="Ecossistema de Software Brasileiro",
@@ -28,8 +31,7 @@ with st.sidebar:
 @st.cache_data
 def carregar_kpis() -> tuple:
     """Carrega colunas mínimas e calcula os 5 KPIs da home."""
-    colunas = ["uf", "situacao_cadastral", "data_inicio_atividade", "data_situacao_cadastral"]
-    df = pd.read_parquet(DATASET_PATH, columns=colunas)
+    df = pd.read_parquet(DATA_PATH)
     df = df[df["uf"] != "EX"]
     df["regiao"] = df["uf"].map(UF_REGIAO)
 

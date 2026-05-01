@@ -7,20 +7,19 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from config import (
-    DATASET_PATH, REGIOES, UF_REGIAO,
+    REGIOES, UF_REGIAO,
     CORES, MAPA_CNAE, COORTES,
     LAYOUT_BASE, FONTE_DADOS, SUBTITULO_STYLE,
 )
 
-st.set_page_config(page_title="Mortalidade Empresarial", layout="wide")
+DATA_PATH = Path(__file__).parent.parent / "dataset_final.parquet"
 
-COLUNAS = ["uf", "situacao_cadastral", "data_inicio_atividade",
-           "data_situacao_cadastral", "cnae_fiscal_principal"]
+st.set_page_config(page_title="Mortalidade Empresarial", layout="wide")
 
 
 @st.cache_data
 def carregar_dados() -> pd.DataFrame:
-    df = pd.read_parquet(DATASET_PATH, columns=COLUNAS)
+    df = pd.read_parquet(DATA_PATH)
     df = df[df["uf"] != "EX"]
     df["regiao"] = df["uf"].map(UF_REGIAO)
     df["ano_abertura"] = pd.to_numeric(
