@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -8,21 +6,24 @@ from config import (
     REGIOES, UF_REGIAO,
     CORES, MAPA_CNAE, COORTES,
     LAYOUT_BASE, FONTE_DADOS, SUBTITULO_STYLE,
+    carregar_dados_otimizado,
 )
-
-DATA_PATH = Path(__file__).parent.parent / "dataset_final.parquet"
 
 st.set_page_config(page_title="Mortalidade Empresarial", layout="wide")
 
 
-@st.cache_data
+@st.cache_data(max_entries=1, show_spinner=False)
 def carregar_dados() -> pd.DataFrame:
-    df = pd.read_parquet(DATA_PATH)
+    colunas = [
+        "uf", "situacao_cadastral", "cnae_fiscal_principal",
+        "data_inicio_atividade", "data_situacao_cadastral"
+    ]
+    df = carregar_dados_otimizado(colunas)
     df = df[df["uf"] != "EX"]
     df["regiao"] = df["uf"].map(UF_REGIAO)
     df["ano_abertura"] = pd.to_numeric(
-        df["data_inicio_atividade"].str[:4], errors="coerce"
-    ).astype("Int64")
+        df["data_inicio_atividade"].astype(str).str[:4], errors="coerce", downcast="unsigned"
+    )
     df["cnae_label"] = df["cnae_fiscal_principal"].map(MAPA_CNAE).fillna("Outros")
     df["data_inicio_atividade"] = pd.to_datetime(
         df["data_inicio_atividade"], format="%Y%m%d", errors="coerce"
@@ -37,11 +38,11 @@ df = carregar_dados()
 
 st.title("Mortalidade Empresarial")
 st.markdown(
-    f'<p style="{SUBTITULO_STYLE}">'
+    f''
     'Análise de sobrevivência por coorte de abertura e mortalidade por segmento de atuação. '
     'O Nordeste apresenta paradoxo: melhor taxa de sobrevivência que o Sudeste, '
     'mas cria muito menos empresas — o gargalo é de volume, não de resiliência.'
-    '</p>',
+    '',
     unsafe_allow_html=True,
 )
 
@@ -57,8 +58,6 @@ if df_f.empty:
     st.stop()
 
 st.markdown("---")
-
-# ── Gráfico 1: Sobrevivência por coorte ─────────────────────────────────────
 st.subheader("Sobrevivência por coorte de abertura", anchor=False)
 
 fig_surv = go.Figure()
@@ -105,29 +104,27 @@ if "Nordeste" in reg_sel and "Sudeste" in reg_sel:
         se_vol_2008 = len(se_r[se_r["ano_abertura"] == 2008])
         sinal = "+" if best["diff"] >= 0 else ""
         st.markdown(
-            f'<div style="border-left:4px solid #16a34a; background:#f0fdf4;'
-            f' padding:14px 18px; border-radius:6px; margin:8px 0;">'
-            f'<span style="font-weight:700; color:#1a1a2e;">Paradoxo da sobrevivência: </span>'
-            f'<span style="color:#374151;">Na coorte de <strong>{best["coorte"]}</strong>, o Nordeste'
-            f' tem taxa de sobrevivência de <strong>{best["ne"]}%</strong> vs <strong>{best["se"]}%</strong>'
+            f''
+            f'Paradoxo da sobrevivência: '
+            f'Na coorte de {best["coorte"]}, o Nordeste'
+            f' tem taxa de sobrevivência de {best["ne"]}% vs {best["se"]}%'
             f' no Sudeste ({sinal}{best["diff"]} pp de vantagem). Porém, o Sudeste abriu'
-            f' <strong>{se_vol_2008 // max(ne_vol_2008, 1)}×</strong> mais empresas nessa coorte.'
-            f' O problema nordestino é de <em>volume de criação</em>, não de resiliência.</span>'
-            f'</div>',
+            f' {se_vol_2008 // max(ne_vol_2008, 1)}× mais empresas nessa coorte.'
+            f' O problema nordestino é de volume de criação, não de resiliência.'
+            f'',
             unsafe_allow_html=True,
         )
 
 st.markdown("---")
 col_vida, col_cnae = st.columns(2)
 
-# ── Gráfico 2: Tempo mediano de vida ────────────────────────────────────────
 with col_vida:
     st.subheader("Tempo mediano de vida — baixadas", anchor=False)
     df_bx = df_f[df_f["situacao_cadastral"] == "08"].copy()
     df_bx = df_bx.dropna(subset=["data_inicio_atividade", "data_situacao_cadastral"])
     df_bx["vida_anos"] = (df_bx["data_situacao_cadastral"] - df_bx["data_inicio_atividade"]).dt.days / 365.25
     df_bx = df_bx[df_bx["vida_anos"] > 0]
-    med = (df_bx.groupby("regiao")["vida_anos"].median()
+    med = (df_bx.groupby("regiao", observed=True)["vida_anos"].median()
            .reset_index(name="mediana").sort_values("mediana"))
     med["cor"] = med["regiao"].apply(lambda r: CORES.get(r, "#94a3b8"))
     fig_v = px.bar(med, x="mediana", y="regiao", orientation="h",
@@ -140,11 +137,10 @@ with col_vida:
     st.plotly_chart(fig_v, use_container_width=True)
     st.caption(FONTE_DADOS)
 
-# ── Gráfico 3: Mortalidade por CNAE ─────────────────────────────────────────
 with col_cnae:
     st.subheader("Taxa de mortalidade por CNAE", anchor=False)
     mort = (
-        df_f.groupby("cnae_label")
+        df_f.groupby("cnae_label", observed=True)
         .apply(lambda g: (g["situacao_cadastral"] == "08").sum() / len(g) * 100,
                include_groups=False)
         .reset_index(name="pct").sort_values("pct")
@@ -159,23 +155,21 @@ with col_cnae:
     st.plotly_chart(fig_c, use_container_width=True)
     st.caption(FONTE_DADOS)
 
-# ── Insights dinâmicos ────────────────────────────────────────────────────────
 if not med.empty:
     ne_med_row = med[med["regiao"] == "Nordeste"]
     se_med_row = med[med["regiao"] == "Sudeste"]
     if len(ne_med_row) > 0 and len(se_med_row) > 0:
-        ne_med = ne_med_row["mediana"].values[0]
-        se_med = se_med_row["mediana"].values[0]
+        ne_med = float(ne_med_row["mediana"].values[0])
+        se_med = float(se_med_row["mediana"].values[0])
         st.markdown(
-            f'<div style="border-left:4px solid #e05c2b; background:#fff8f5;'
-            f' padding:16px 20px; border-radius:6px; margin-top:8px;">'
-            f'<span style="font-weight:700; color:#1a1a2e;">Insight: </span>'
-            f'<span style="color:#374151;">O Nordeste tem tempo mediano de vida de'
-            f' <strong>{ne_med:.1f} anos</strong> para empresas baixadas, contra'
-            f' <strong>{se_med:.1f} anos</strong> no Sudeste. Mas sua taxa de sobrevivência'
-            f' por coorte é superior ao Sudeste — o problema é de <em>volume</em>,'
-            f' não de <em>resiliência</em>.</span>'
-            f'</div>',
+            f''
+            f'Insight: '
+            f'O Nordeste tem tempo mediano de vida de'
+            f' {ne_med:.1f} anos para empresas baixadas, contra'
+            f' {se_med:.1f} anos no Sudeste. Mas sua taxa de sobrevivência'
+            f' por coorte é superior ao Sudeste — o problema é de volume,'
+            f' não de resiliência.'
+            f'',
             unsafe_allow_html=True,
         )
 
@@ -183,13 +177,12 @@ if not mort.empty:
     worst_cnae = mort.iloc[-1]
     best_cnae  = mort.iloc[0]
     st.markdown(
-        f'<div style="border-left:4px solid #dc2626; background:#fef2f2;'
-        f' padding:14px 18px; border-radius:6px; margin-top:8px;">'
-        f'<span style="font-weight:700; color:#1a1a2e;">Risco por segmento: </span>'
-        f'<span style="color:#374151;"><strong>{worst_cnae["cnae_label"]}</strong> é o segmento de'
+        f''
+        f'Risco por segmento: '
+        f'{worst_cnae["cnae_label"]} é o segmento de'
         f' maior mortalidade ({worst_cnae["pct"]:.1f}% de empresas baixadas), enquanto'
-        f' <strong>{best_cnae["cnae_label"]}</strong> é o mais resiliente ({best_cnae["pct"]:.1f}%).'
-        f' Segmentos com baixa barreira de entrada tendem a ter maior rotatividade.</span>'
-        f'</div>',
+        f' {best_cnae["cnae_label"]} é o mais resiliente ({best_cnae["pct"]:.1f}%).'
+        f' Segmentos com baixa barreira de entrada tendem a ter maior rotatividade.'
+        f'',
         unsafe_allow_html=True,
     )
