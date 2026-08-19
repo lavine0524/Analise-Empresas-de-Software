@@ -1,27 +1,25 @@
-from pathlib import Path
-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from config import (
     REGIOES, UF_REGIAO,
     CORES, LAYOUT_BASE, FONTE_DADOS, SUBTITULO_STYLE,
+    carregar_dados_otimizado,
 )
-
-DATA_PATH = Path(__file__).parent.parent / "dataset_final.parquet"
 
 st.set_page_config(page_title="Dinâmica Temporal", layout="wide")
 
 
-@st.cache_data
+@st.cache_data(max_entries=1, show_spinner=False)
 def carregar_dados() -> pd.DataFrame:
-    df = pd.read_parquet(DATA_PATH)
+    colunas = ["uf", "data_inicio_atividade"]
+    df = carregar_dados_otimizado(colunas)
     df = df[df["uf"] != "EX"]
     df["regiao"] = df["uf"].map(UF_REGIAO)
     df["ano_abertura"] = pd.to_numeric(
-        df["data_inicio_atividade"].str[:4], errors="coerce"
-    ).astype("Int64")
-    return df.dropna(subset=["ano_abertura"])
+        df["data_inicio_atividade"].astype(str).str[:4], errors="coerce", downcast="unsigned"
+    )
+    return df.dropna(subset=["ano_abertura"])[["regiao", "ano_abertura"]]
 
 
 df = carregar_dados()
@@ -31,10 +29,10 @@ ano_max_data = int(df["ano_abertura"].max())
 
 st.title("Dinâmica Temporal de Abertura de Empresas")
 st.markdown(
-    f'<p style="{SUBTITULO_STYLE}">'
+    f''
     'Evolução anual de aberturas de empresas de software por região (2000–2024). '
     'Apesar de crescimento percentual semelhante, a brecha absoluta entre Nordeste e Sudeste se amplia.'
-    '</p>',
+    '',
     unsafe_allow_html=True,
 )
 
@@ -56,7 +54,7 @@ if df_f.empty:
     st.stop()
 
 serie = (
-    df_f.groupby(["regiao", "ano_abertura"]).size()
+    df_f.groupby(["regiao", "ano_abertura"], observed=True).size()
     .reset_index(name="empresas").sort_values("ano_abertura")
 )
 
@@ -102,18 +100,16 @@ if 2020 in serie["ano_abertura"].values and ano_max >= 2023:
         rows_accel.sort(key=lambda x: x["pct"], reverse=True)
         top, bot = rows_accel[0], rows_accel[-1]
         st.markdown(
-            f'<div style="border-left:4px solid #16a34a; background:#f0fdf4;'
-            f' padding:14px 18px; border-radius:6px; margin:8px 0;">'
-            f'<span style="font-weight:700; color:#1a1a2e;">Recuperação pós-pandemia (2020→2023): </span>'
-            f'<span style="color:#374151;"><strong>{top["Região"]}</strong> liderou a aceleração'
-            f' (+{top["pct"]}%), enquanto <strong>{bot["Região"]}</strong> cresceu +{bot["pct"]}%.'
+            f''
+            f'Recuperação pós-pandemia (2020→2023): '
+            f'{top["Região"]} liderou a aceleração'
+            f' (+{top["pct"]}%), enquanto {bot["Região"]} cresceu +{bot["pct"]}%.'
             f' A pandemia serviu como catalisador assimétrico — regiões menores aceleraram'
-            f' proporcionalmente mais com a digitalização forçada.</span>'
-            f'</div>',
+            f' proporcionalmente mais com a digitalização forçada.'
+            f'',
             unsafe_allow_html=True,
         )
 
-# ── Tabela de crescimento ─────────────────────────────────────────────────────
 if ano_min <= 2015 and ano_max >= 2024:
     st.markdown("#### Crescimento acumulado 2015 → 2024")
     rows = []
@@ -130,21 +126,16 @@ if ano_min <= 2015 and ano_max >= 2024:
 
         def fmt_cresc(v: float) -> str:
             cor = "#16a34a" if v >= 0 else "#dc2626"
-            return f'<span style="color:{cor};font-weight:600">{"+" if v>=0 else ""}{v:.1f}%</span>'
+            return f'{"+" if v>=0 else ""}{v:.1f}%'
 
         df_tab_html = df_tab.copy()
         df_tab_html["Crescimento (%)"] = df_tab_html["Crescimento (%)"].apply(fmt_cresc)
         html = df_tab_html.to_html(index=False, escape=False, classes="", border=0)
         st.markdown(
-            f'<style>table{{border-collapse:collapse;width:100%}}'
-            f'th{{background:#f0f2f6;color:#1a1a2e;padding:10px 14px;text-align:left;'
-            f'border-bottom:2px solid #e5e7eb;font-size:0.88rem}}'
-            f'td{{padding:9px 14px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;font-size:0.9rem}}'
-            f'tr:hover td{{background:#f9fafb}}</style>{html}',
+            f'{html}',
             unsafe_allow_html=True,
         )
 
-        # insight dinâmico baseado nos dados calculados
         ne_row = df_tab[df_tab["Região"] == "Nordeste"]
         se_row = df_tab[df_tab["Região"] == "Sudeste"]
         if len(ne_row) > 0 and len(se_row) > 0:
@@ -157,16 +148,16 @@ if ano_min <= 2015 and ano_max >= 2024:
             gap_ini = se_abs_ini - ne_abs_ini
             gap_fim = se_abs_fim - ne_abs_fim
             st.markdown(
-                f'<div style="background:#f0f2f6; border-radius:6px; padding:12px 16px; margin-top:10px;">'
-                f'<span style="color:#374151; font-size:0.9rem;">'
-                f'O Nordeste cresceu <strong>+{ne_pct:.1f}%</strong> no período,'
-                f' partindo de uma base muito menor que o Sudeste (<strong>+{se_pct:.1f}%</strong>).'
-                f' Em termos absolutos, a diferença passou de ~{gap_ini:,} para ~{gap_fim:,} empresas/ano.</span>'
-                f'</div>',
+                f''
+                f''
+                f'O Nordeste cresceu +{ne_pct:.1f}% no período,'
+                f' partindo de uma base muito menor que o Sudeste (+{se_pct:.1f}%).'
+                f' Em termos absolutos, a diferença passou de ~{gap_ini:,} para ~{gap_fim:,} empresas/ano.'
+                f'',
                 unsafe_allow_html=True,
             )
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("", unsafe_allow_html=True)
 
 if "Nordeste" in reg_sel and "Sudeste" in reg_sel:
     ne_last = int(serie[(serie["regiao"] == "Nordeste") & (serie["ano_abertura"] == min(ano_max, ano_max_data))]["empresas"].sum())
@@ -177,25 +168,23 @@ if "Nordeste" in reg_sel and "Sudeste" in reg_sel:
         gap_ini = se_first - ne_first
         gap_fim = se_last  - ne_last
         st.markdown(
-            f'<div style="border-left:4px solid #e05c2b; background:#fff8f5;'
-            f' padding:16px 20px; border-radius:6px;">'
-            f'<span style="font-weight:700; color:#1a1a2e;">Insight: </span>'
-            f'<span style="color:#374151;">O Nordeste cresceu de <strong>~{ne_first:,}</strong>'
-            f' para <strong>~{ne_last:,}</strong> empresas/ano, mas o Sudeste saltou de'
-            f' <strong>~{se_first:,}</strong> para <strong>~{se_last:,}</strong>.'
-            f' A desigualdade regional <strong>não está convergindo</strong>.</span>'
-            f'</div>',
+            f''
+            f'Insight: '
+            f'O Nordeste cresceu de ~{ne_first:,}'
+            f' para ~{ne_last:,} empresas/ano, mas o Sudeste saltou de'
+            f' ~{se_first:,} para ~{se_last:,}.'
+            f' A desigualdade regional não está convergindo.'
+            f'',
             unsafe_allow_html=True,
         )
         st.markdown(
-            f'<div style="border-left:4px solid #94a3b8; background:#f8fafc;'
-            f' padding:14px 18px; border-radius:6px; margin-top:8px;">'
-            f'<span style="font-weight:700; color:#1a1a2e;">Divergência absoluta: </span>'
-            f'<span style="color:#374151;">A diferença entre Sudeste e Nordeste em novas'
-            f' empresas/ano passou de <strong>{gap_ini:,}</strong> (início do período) para'
-            f' <strong>{gap_fim:,}</strong> (fim do período). Crescimento percentual similar'
-            f' sobre bases muito diferentes significa que a <em>brecha absoluta aumenta</em>.'
-            f' Para convergir, o Nordeste precisaria crescer 3–4× mais rápido que o Sudeste.</span>'
-            f'</div>',
+            f''
+            f'Divergência absoluta: '
+            f'A diferença entre Sudeste e Nordeste em novas'
+            f' empresas/ano passou de {gap_ini:,} (início do período) para'
+            f' {gap_fim:,} (fim do período). Crescimento percentual similar'
+            f' sobre bases muito diferentes significa que a brecha absoluta aumenta.'
+            f' Para convergir, o Nordeste precisaria crescer 3–4× mais rápido que o Sudeste.'
+            f'',
             unsafe_allow_html=True,
         )
