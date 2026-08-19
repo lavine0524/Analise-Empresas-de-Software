@@ -94,3 +94,42 @@ Distribuição do ecossistema entre os 9 estados da região Nordeste:
 ---
 
 ## 🛠️ Estrutura do Repositório
+## 🛠️ Estrutura do Repositório
+
+```text
+.
+├── app.py                     # Página principal da aplicação Streamlit (Home/KPIs)
+├── config.py                  # Configurações globais, paletas, mapeamentos e engine de dados
+├── dataset_final.parquet      # Base tratada e compactada (~479k registros)
+├── requirements.txt           # Dependências de execução em ambiente de produção
+└── pages/                     # Visões analíticas segmentadas
+    ├── 1_Distribuicao_Geografica.py
+    ├── 2_Dinamica_Temporal.py
+    ├── 3_Mortalidade_Empresarial.py
+    ├── 4_Perfil_Setorial.py
+    └── 5_Intra_Nordeste.py
+
+## 🚀 Arquitetura de Dados e Otimização em Produção
+
+O dashboard analítico foi implementado em **Python + Streamlit + Plotly** e disponibilizado via **Render**.
+
+Devido à volumetria do dataset (quase meio milhão de registros) e às restrições do ambiente computacional gratuito (512 MB de RAM), foi implementada uma arquitetura com foco em eficiência de memória:
+
+1. **Leitura Seletiva por Projeção (`Projection Pushdown`):** Cada página lê exclusivamente as colunas necessárias para sua análise (`pd.read_parquet(columns=[...])`), evitando o carregamento redundante de dados em memória.
+2. **Tipagem Categórica & Downcasting:** Conversão explícita de campos textuais repetitivos (`uf`, `regiao`, `situacao_cadastral`, `segmento`, etc.) para tipos categóricos (`category`) e compactação de inteiros/floats, reduzindo o consumo de memória RAM em mais de 75%.
+3. **Controle Estrito de Cache:** Aplicação de `@st.cache_data(max_entries=1)` para impedir a retenção de dados serializados e o acúmulo de instâncias durante a navegação entre visões.
+
+---
+
+## 💻 Como Executar Localmente
+
+1. **Clone o repositório:**
+```bash
+git clone [https://github.com/lavine0524/Analise-Empresas-de-Software.git](https://github.com/lavine0524/Analise-Empresas-de-Software.git)
+cd Analise-Empresas-de-Software
+
+Instale as dependências:
+pip install -r requirements.txt
+
+Execute a aplicação:
+streamlit run app.py
