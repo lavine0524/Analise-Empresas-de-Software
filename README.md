@@ -1,121 +1,96 @@
 # Análise do Setor de Software Brasileiro
 
-Projeto de extensão acadêmica que mapeia e analisa o setor de software brasileiro a partir dos dados abertos de CNPJ da Receita Federal, com foco na desigualdade regional entre o Nordeste e o restante do país.
+Projeto analítico e de extensão acadêmica que mapeia o ecossistema e a dinâmica das empresas de software no Brasil a partir dos microdados de Estabelecimentos CNPJ da Receita Federal, com foco analítico nas assimetrias regionais entre o Nordeste e os demais polos do país.
 
-**Vínculo:** Estruture Negócios | UFPB 2026
-**Fonte dos dados:** Receita Federal do Brasil — Dados Abertos CNPJ (fev/2026)
-
----
-
-## Contexto
-
-O projeto investiga a hipótese central do programa Estruture Negócios: o Nordeste é estruturalmente sub-representado no ecossistema de software brasileiro, não por falta de resiliência dos empreendedores, mas por ausência de acesso a mercado, capital e infraestrutura.
+**Vínculo Acadêmico:** Projeto de Extensão Estruture Negócios — UFPB 2026  
+**Fonte Primária:** Receita Federal do Brasil — Dados Abertos de Estabelecimentos CNPJ (Fevereiro/2026)  
+**Aplicação Interativa:** [Acessar Dashboard no Render](https://analise-empresas-de-software-1.onrender.com)  
 
 ---
 
-## Principais Achados
+## 🎯 Contexto e Hipótese de Pesquisa
 
-### 1. Concentração Geográfica Extrema
-São Paulo sozinho ultrapassa 120.000 empresas de software ativas — mais do que todos os outros estados somados. O bloco MG, PR, RJ, SC e RS forma um segundo grupo com 15.000–22.000 empresas cada.
-
-### 2. O Nordeste Tem 28% da População, mas Apenas 8,4% das Empresas
-
-| Região | % das empresas ativas |
-|--------|----------------------|
-| Sudeste | 66,8% |
-| Sul | 17,0% |
-| Nordeste | 8,4% |
-| Centro-Oeste | 6,1% |
-| Norte | 1,7% |
-
-Nenhum estado nordestino entra no top 7 nacional. CE (8º), BA (10º) e PE (11º) são os mais representativos. A Paraíba aparece na 14ª posição.
-
-### 3. Resultado Contraintuitivo: Empresas Nordestinas Sobrevivem Mais
-
-| Região | % de empresas ativas |
-|--------|---------------------|
-| Sul | 58,5% |
-| Norte | 58,5% |
-| Nordeste | 57,4% |
-| Centro-Oeste | 56,4% |
-| Sudeste | 52,9% |
-
-O problema do ecossistema nordestino **não é que as empresas fecham mais** — é que **poucas são abertas**. A questão é estrutural, não de competência.
-
-### 4. O Nordeste Está Preso no Modelo de Serviço, Não de Produto
-Os CNAEs dominantes na região são suporte técnico em TI, desenvolvimento sob encomenda e consultoria — modelos que não escalam. Software customizável e não-customizável (com potencial de produto) aparecem apenas em 4º e 5º lugar.
-
-### 5. A Digitalização Pós-2020 Ampliou, Não Reduziu, a Desigualdade
-
-| Período | Sudeste (aprox./ano) | Nordeste (aprox./ano) | Gap absoluto |
-|---------|---------------------|----------------------|--------------|
-| 2019 | ~8.000 | ~800 | ~7.200 |
-| 2024 | ~21.000 | ~3.500 | ~17.500 |
-
-A pandemia funcionou como catalisador para todas as regiões, mas o Sudeste cresceu proporcionalmente mais em termos absolutos — reforçando que a desigualdade é estrutural e persistente.
+O projeto investiga a hipótese central do programa **Estruture Negócios**: o Nordeste brasileiro apresenta uma sub-representação quantitativa severa no ecossistema de base tecnológica nacional. Contudo, essa disparidade decorre de barreiras estruturais de acesso a capital, infraestrutura e mercados centrais, e **não** de menor resiliência ou eficiência operacional dos empreendimentos locais.
 
 ---
 
-## CNAEs Considerados
+## 📊 Principais Indicadores e Achados Empíricos
 
-| Código | Descrição |
-|--------|-----------|
-| 6201500 / 6201501 | Desenvolvimento de software sob encomenda |
-| 6201502 | Web design |
-| 6202300 | Desenvolvimento de software customizável |
-| 6203100 | Desenvolvimento de software não-customizável |
-| 6204000 | Consultoria em tecnologia da informação |
-| 6209100 | Suporte técnico e manutenção em TI |
+O universo analisado compreende **479.071 estabelecimentos de software** registrados no território nacional (excluindo registros do exterior).
 
----
+### 1. Panorama Geral Consolidado
 
-## Estrutura do Projeto
-
-```
-.
-├── filtrar.py              # Filtra os arquivos brutos da Receita Federal pelos CNAEs de software
-├── processar_simples.py    # Extrai dados do Simples Nacional para os CNPJs de software
-├── consolidar.py           # Combina os datasets em dataset_final.csv
-├── explorar.py             # Exploração inicial dos dados brutos
-├── analise.ipynb           # Notebook principal com análises e visualizações
-├── software_brasil_completo.csv   # Estabelecimentos de software filtrados
-├── software_estabelecimentos.csv  # Dataset intermediário de estabelecimentos
-└── simples_software.csv           # Dados do Simples Nacional para empresas de software
-```
-
-> **Não incluídos no repositório:** arquivos brutos da Receita Federal (Estabelecimentos0-9, Simples/) e o dataset final consolidado (dataset_final.csv) — totalizando ~20 GB. Precisam ser obtidos diretamente nos [Dados Abertos do CNPJ](https://dados.rfb.gov.br/CNPJ/).
+| Indicador | Valor Nacional | Destaque Nordeste | Destaque Sudeste |
+| :--- | :---: | :---: | :---: |
+| **Total de Estabelecimentos** | 479.071 | 40.089 (8,4%) | 320.019 (66,8%) |
+| **Taxa Média de Atividade** | 54,5% | 57,4% | 52,9% |
+| **Adesão ao Simples Nacional** | — | 42,7% | 39,5% |
+| **Tempo Mediano de Vida (Baixadas)** | — | 4,1 anos | 5,6 anos |
 
 ---
 
-## Como Executar
+### 2. Concentração e Distribuição Regional
 
-### Requisitos
+| Região | % das Empresas no Ecossistema | Taxa de Empresas Ativas (%) | Tempo Mediano de Vida (Baixadas) |
+| :--- | :---: | :---: | :---: |
+| **Sudeste** | 66,8% | 52,9% | 5,6 anos |
+| **Sul** | 17,0% | 58,5% | 4,2 anos |
+| **Nordeste** | 8,4% | 57,4% | 4,1 anos |
+| **Centro-Oeste** | 6,1% | 56,4% | — |
+| **Norte** | 1,7% | 58,5% | — |
 
-```bash
-pip install pandas matplotlib seaborn jupyter
-```
-
-### Pipeline de dados
-
-Execute os scripts na ordem abaixo para gerar o dataset final a partir dos arquivos brutos:
-
-```bash
-python filtrar.py           # → software_brasil_completo.csv
-python processar_simples.py # → simples_software.csv
-python consolidar.py        # → dataset_final.csv
-```
-
-### Análise
-
-```bash
-jupyter notebook analise.ipynb
-```
+* **Hiperconcentração em São Paulo:** O estado de São Paulo concentra sozinho um volume que supera em várias vezes a totalidade dos 9 estados nordestinos combinados.
+* **Hiperprimazia das Capitais no Nordeste:** Enquanto estados do Sul distribuem empresas por polos regionais e cidades secundárias, os estados nordestinos concentram, em média, a maioria expressiva de seus negócios na capital (liderados por Aracaju/SE e Fortaleza/CE).
 
 ---
 
-## Observações Técnicas
+### 3. Análise Intra-Nordeste (Detalhamento por Estado)
 
-- Arquivos brutos da Receita Federal usam encoding `latin-1`; CSVs processados usam `UTF-8`
-- A leitura dos arquivos brutos é feita em chunks de 100.000 linhas para controle de memória
-- O join entre os datasets é feito pela coluna `cnpj_basico` (CNPJ sem sufixo de filial)
-- O dado de 2025 no notebook deve ser tratado como parcial — empresas abertas recentemente podem não ter situação cadastral consolidada no dataset de fev/2026
+Distribuição do ecossistema entre os 9 estados da região Nordeste:
+
+| Estado (UF) | Volume de Empresas | Taxa de Atividade (%) | Adesão ao Simples Nacional (%) |
+| :--- | :---: | :---: | :---: |
+| **Bahia (BA)** | 9.603 | 50,0% | 38,2% |
+| **Ceará (CE)** | 9.086 | 62,4% | 46,9% |
+| **Pernambuco (PE)** | 8.483 | 53,9% | 38,3% |
+| **Paraíba (PB)** | 3.242 | 63,7% | 48,0% |
+| **Rio Grande do Norte (RN)** | 2.560 | 62,9% | 48,9% |
+| **Maranhão (MA)** | 2.269 | 60,0% | 43,5% |
+| **Sergipe (SE)** | 1.806 | 55,7% | 40,1% |
+| **Alagoas (AL)** | 1.792 | 57,4% | 40,7% |
+| **Piauí (PI)** | 1.472 | 69,2% | 52,9% |
+
+> **Paradoxo da Sobrevivência:** O Nordeste exibe taxa de atividade e sobrevivência por coorte superior à do Sudeste (ex: na coorte histórica de 2008). No entanto, o volume de empresas abertas no Sudeste é expressivamente maior, demonstrando que o gargalo regional é de **capacidade de criação e acesso**, não de resiliência.
+
+---
+
+### 4. Perfil Setorial e Taxa de Mortalidade por Segmento (CNAE)
+
+| Segmento / Atividade Econômica | Taxa de Mortalidade (% Baixadas) | Participação no Nordeste | Participação no Sudeste |
+| :--- | :---: | :---: | :---: |
+| **Software não-customizável** | 47,8% | 7,6% | 7,7% |
+| **Suporte técnico em TI** | 38,8% | 31,0% | 33,5% |
+| **Desenvolvimento sob encomenda** | 37,6% | 25,6% | 23,5% |
+| **Consultoria em TI** | 34,9% | 20,5% | 25,7% |
+| **Software customizável** | 24,1% | 13,4% | 8,2% |
+| **Web design** | 22,3% | 1,9% | — |
+
+* **Presença Digital e Formalização:** O Nordeste registra 79,5% de e-mail e 90,3% de telefone cadastrados na Receita Federal, comparado a 78,4% (e-mail) e 89,2% (telefone) no Sudeste.
+
+---
+
+## 🏷️ Classificação CNAE Utilizada
+
+| Código CNAE | Denominação Oficial |
+| :--- | :--- |
+| **6201-5/00** | Desenvolvimento de programas de computador sob encomenda |
+| **6201-5/01** | Desenvolvimento de programas de computador sob encomenda (detalhado) |
+| **6201-5/02** | Web design |
+| **6202-3/00** | Desenvolvimento e licenciamento de programas customizáveis |
+| **6203-1/00** | Desenvolvimento e licenciamento de programas não-customizáveis |
+| **6204-0/00** | Consultoria em tecnologia da informação |
+| **6209-1/00** | Suporte técnico, manutenção e outros serviços em TI |
+
+---
+
+## 🛠️ Estrutura do Repositório
