@@ -94,7 +94,6 @@ Distribuição do ecossistema entre os 9 estados da região Nordeste:
 ---
 
 ## 🛠️ Estrutura do Repositório
-## 🛠️ Estrutura do Repositório
 
 ```text
 .
@@ -108,6 +107,8 @@ Distribuição do ecossistema entre os 9 estados da região Nordeste:
     ├── 3_Mortalidade_Empresarial.py
     ├── 4_Perfil_Setorial.py
     └── 5_Intra_Nordeste.py
+
+---
 
 ## 🚀 Arquitetura de Dados e Otimização em Produção
 
