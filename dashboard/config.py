@@ -70,3 +70,24 @@ FONTE_DADOS = "Fonte: Receita Federal do Brasil — Estabelecimentos CNPJ, fev/2
 def fmt_br(valor: float, dec: int = 1) -> str:
     """Formata número no locale pt-BR (vírgula como separador decimal)."""
     return f"{valor:.{dec}f}".replace(".", ",")
+
+import streamlit as st
+import pandas as pd
+
+@st.cache_data(max_entries=1, show_spinner=False)
+def carregar_dados(colunas=None):
+    caminho = DATA_PATH if 'DATA_PATH' in globals() else "dataset_final.parquet"
+    df = pd.read_parquet(caminho, columns=colunas)
+    
+    # Reduz drásticamente a RAM convertendo textos para categorias
+    cols_cat = ["uf", "regiao", "situacao_cadastral", "opcao_simples", "segmento", "municipio", "coorte"]
+    for c in cols_cat:
+        if c in df.columns:
+            df[c] = df[c].astype("category")
+            
+    if "ano_inicio_atividade" in df.columns:
+        df["ano_inicio_atividade"] = pd.to_numeric(df["ano_inicio_atividade"], downcast="unsigned")
+    if "tempo_vida_anos" in df.columns:
+        df["tempo_vida_anos"] = pd.to_numeric(df["tempo_vida_anos"], downcast="float")
+        
+    return df
