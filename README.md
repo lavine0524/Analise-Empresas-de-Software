@@ -96,7 +96,7 @@ Distribuição do ecossistema entre os 9 estados da região Nordeste:
 ## 🛠️ Estrutura do Repositório
 
 ```text
-
+.
 ├── app.py                     # Página principal da aplicação Streamlit (Home/KPIs)
 ├── config.py                  # Configurações globais, paletas e mapeamentos
 ├── dataset_final.parquet      # Base tratada e compactada (~479 mil registros)
@@ -107,53 +107,72 @@ Distribuição do ecossistema entre os 9 estados da região Nordeste:
     ├── 3_Mortalidade_Empresarial.py
     ├── 4_Perfil_Setorial.py
     └── 5_Intra_Nordeste.py
+```
 
-🚀 Arquitetura de Dados e Otimização em Produção
+---
 
-O dashboard analítico foi desenvolvido em Python + Streamlit + Plotly e disponibilizado em ambiente de produção por meio do Render.
+## 🚀 Arquitetura de Dados e Otimização em Produção
+
+O dashboard analítico foi desenvolvido em **Python + Streamlit + Plotly** e disponibilizado em ambiente de produção por meio do **Render**.
 
 Devido à volumetria do dataset (aproximadamente 479 mil registros) e às restrições de memória do ambiente gratuito utilizado (512 MB de RAM), foram implementadas estratégias de otimização para reduzir o consumo de memória e garantir a estabilidade da aplicação em produção.
 
-Principais estratégias adotadas
+### Principais estratégias adotadas
 
-Leitura seletiva por projeção (Projection Pushdown)
+1. **Leitura seletiva por projeção (`Projection Pushdown`)**
 
-Cada página do dashboard realiza a leitura apenas das colunas necessárias para sua respectiva análise, utilizando a seleção de colunas durante a leitura do arquivo Parquet. Dessa forma, evita-se o carregamento desnecessário de informações na memória.
+   Cada página do dashboard realiza a leitura apenas das colunas necessárias para sua respectiva análise, utilizando a seleção de colunas durante a leitura do arquivo Parquet. Dessa forma, evita-se o carregamento desnecessário de informações na memória.
 
-Tipagem categórica e otimização dos tipos de dados
+2. **Tipagem categórica e otimização dos tipos de dados**
 
-Campos textuais com valores repetitivos, como uf, regiao, situacao_cadastral e categorias de análise, foram convertidos para tipos mais eficientes, incluindo category quando aplicável. Também foram realizados ajustes nos tipos numéricos para reduzir o consumo de memória durante a execução.
+   Campos textuais com valores repetitivos, como `uf`, `regiao`, `situacao_cadastral` e categorias de análise, foram convertidos para tipos mais eficientes, incluindo `category` quando aplicável. Também foram realizados ajustes nos tipos numéricos para reduzir o consumo de memória durante a execução.
 
-Controle de cache do Streamlit
+3. **Controle de cache do Streamlit**
 
-O mecanismo de cache foi configurado de forma controlada, utilizando @st.cache_data(max_entries=1) nas rotinas de carregamento de dados, evitando a retenção excessiva de objetos em memória durante a utilização do dashboard.
+   O mecanismo de cache foi configurado de forma controlada, utilizando `@st.cache_data(max_entries=1)` nas rotinas de carregamento de dados, evitando a retenção excessiva de objetos em memória durante a utilização do dashboard.
 
-Otimização para ambiente de produção
+4. **Otimização para ambiente de produção**
 
-As otimizações foram realizadas após a identificação de falhas de execução no Render relacionadas ao limite de memória da instância gratuita. A aplicação chegou a apresentar erros 502 e encerramentos por Out of Memory (OOM). Após a refatoração da leitura e do tratamento dos dados, o dashboard passou a operar de forma estável dentro dos recursos disponíveis.
+   As otimizações foram realizadas após a identificação de falhas de execução no Render relacionadas ao limite de memória da instância gratuita. A aplicação chegou a apresentar erros `502` e encerramentos por **Out of Memory (OOM)**. Após a refatoração da leitura e do tratamento dos dados, o dashboard passou a operar de forma estável dentro dos recursos disponíveis.
 
-Resultado
+### Resultado
 
-O dashboard encontra-se implantado e operacional no Render, com navegação pelas diferentes visões analíticas e execução dos filtros e gráficos.
+O dashboard encontra-se **implantado e operacional no Render**, com navegação pelas diferentes visões analíticas e execução dos filtros e gráficos.
 
-🌐 Dashboard online:
+🌐 **Dashboard online:**  
 https://analise-empresas-de-software-1.onrender.com
 
-💻 Como Executar Localmente
-1. Clone o repositório
+---
+
+## 💻 Como Executar Localmente
+
+### 1. Clone o repositório
+
+```bash
 git clone https://github.com/lavine0524/Analise-Empresas-de-Software.git
 cd Analise-Empresas-de-Software
-2. Instale as dependências
+```
+
+### 2. Instale as dependências
+
+```bash
 pip install -r requirements.txt
-3. Execute a aplicação
+```
+
+### 3. Execute a aplicação
+
+```bash
 streamlit run app.py
+```
 
 Após a execução, o Streamlit disponibilizará a aplicação localmente no endereço indicado pelo terminal.
 
-🌐 Deploy
+---
 
-A aplicação está hospedada no Render como um Web Service e utiliza o repositório GitHub como fonte do código.
+## 🌐 Deploy
 
-Status: 🟢 Em produção
+A aplicação está hospedada no **Render** como um Web Service e utiliza o repositório GitHub como fonte do código.
 
-Acesso: https://analise-empresas-de-software-1.onrender.com
+**Status:** 🟢 Em produção
+
+**Acesso:** https://analise-empresas-de-software-1.onrender.com
