@@ -1,4 +1,6 @@
 from pathlib import Path
+import pandas as pd
+import streamlit as st
 
 DATASET_PATH = Path(__file__).parent / "dataset_final.parquet"
 
@@ -71,23 +73,13 @@ def fmt_br(valor: float, dec: int = 1) -> str:
     """Formata número no locale pt-BR (vírgula como separador decimal)."""
     return f"{valor:.{dec}f}".replace(".", ",")
 
-import streamlit as st
-import pandas as pd
 
 @st.cache_data(max_entries=1, show_spinner=False)
-def carregar_dados(colunas=None):
-    caminho = DATA_PATH if 'DATA_PATH' in globals() else "dataset_final.parquet"
-    df = pd.read_parquet(caminho, columns=colunas)
-    
-    # Reduz drásticamente a RAM convertendo textos para categorias
-    cols_cat = ["uf", "regiao", "situacao_cadastral", "opcao_simples", "segmento", "municipio", "coorte"]
+def carregar_dados_otimizado(colunas: list[str]) -> pd.DataFrame:
+    """Carrega apenas colunas necessárias com consumo de RAM minimizado."""
+    df = pd.read_parquet(DATASET_PATH, columns=colunas)
+    cols_cat = ["uf", "regiao", "situacao_cadastral", "opcao_simples", "municipio", "cnae_fiscal_principal"]
     for c in cols_cat:
         if c in df.columns:
             df[c] = df[c].astype("category")
-            
-    if "ano_inicio_atividade" in df.columns:
-        df["ano_inicio_atividade"] = pd.to_numeric(df["ano_inicio_atividade"], downcast="unsigned")
-    if "tempo_vida_anos" in df.columns:
-        df["tempo_vida_anos"] = pd.to_numeric(df["tempo_vida_anos"], downcast="float")
-        
     return df
