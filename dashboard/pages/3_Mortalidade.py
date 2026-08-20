@@ -39,7 +39,7 @@ df = carregar_dados()
 st.title("Mortalidade Empresarial")
 st.markdown(
     f''
-    'Análise de sobrevivência por coorte de abertura e mortalidade por segmento de atuação. '
+    'Análise de sobrevivência por corte de abertura e mortalidade por segmento de atuação. '
     'O Nordeste apresenta paradoxo: melhor taxa de sobrevivência que o Sudeste, '
     'mas cria muito menos empresas — o gargalo é de volume, não de resiliência.'
     '',
@@ -78,8 +78,8 @@ for regiao in reg_sel:
     ))
 
 fig_surv.update_layout(
-    title="Taxa de sobrevivência por coorte de abertura",
-    xaxis_title="Coorte (ano de abertura)", yaxis_title="% ainda ativas",
+    title="Taxa de sobrevivência por corte de abertura",
+    xaxis_title="Corte (ano de abertura)", yaxis_title="% ainda ativas",
     height=400, hovermode="x unified",
     legend=dict(bgcolor="rgba(255,255,255,0.9)", bordercolor="#e5e7eb", borderwidth=1),
     **LAYOUT_BASE,
@@ -97,7 +97,7 @@ if "Nordeste" in reg_sel and "Sudeste" in reg_sel:
         if len(ne_c) > 50 and len(se_c) > 50:
             ne_s = round((ne_c["situacao_cadastral"] == "02").sum() / len(ne_c) * 100, 1)
             se_s = round((se_c["situacao_cadastral"] == "02").sum() / len(se_c) * 100, 1)
-            surv_rows.append({"coorte": c, "ne": ne_s, "se": se_s, "diff": round(ne_s - se_s, 1)})
+            surv_rows.append({"corte": c, "ne": ne_s, "se": se_s, "diff": round(ne_s - se_s, 1)})
     if surv_rows:
         best = max(surv_rows, key=lambda x: x["diff"])
         ne_vol_2008 = len(ne_r[ne_r["ano_abertura"] == 2008])
@@ -106,10 +106,10 @@ if "Nordeste" in reg_sel and "Sudeste" in reg_sel:
         st.markdown(
             f''
             f'Paradoxo da sobrevivência: '
-            f'Na coorte de {best["coorte"]}, o Nordeste'
+            f'No corte de {best["corte"]}, o Nordeste'
             f' tem taxa de sobrevivência de {best["ne"]}% vs {best["se"]}%'
             f' no Sudeste ({sinal}{best["diff"]} pp de vantagem). Porém, o Sudeste abriu'
-            f' {se_vol_2008 // max(ne_vol_2008, 1)}× mais empresas nessa coorte.'
+            f' {se_vol_2008 // max(ne_vol_2008, 1)}× mais empresas nesse corte.'
             f' O problema nordestino é de volume de criação, não de resiliência.'
             f'',
             unsafe_allow_html=True,
@@ -167,7 +167,7 @@ if not med.empty:
             f'O Nordeste tem tempo mediano de vida de'
             f' {ne_med:.1f} anos para empresas baixadas, contra'
             f' {se_med:.1f} anos no Sudeste. Mas sua taxa de sobrevivência'
-            f' por coorte é superior ao Sudeste — o problema é de volume,'
+            f' por corte é superior ao Sudeste — o problema é de volume,'
             f' não de resiliência.'
             f'',
             unsafe_allow_html=True,
