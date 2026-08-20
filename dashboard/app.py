@@ -16,8 +16,6 @@ st.markdown(
 )
 
 with st.sidebar:
-    st.markdown("## Estruture Negócios")
-    st.markdown("**Projeto de Extensão — UFPB 2026**")
     st.markdown("---")
     st.markdown("**Fonte dos dados:**  \nReceita Federal do Brasil  \nEstabelecimentos CNPJ — fev/2026")
 
