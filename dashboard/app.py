@@ -62,8 +62,7 @@ kpis = [
 st.title("Ecossistema de Software Brasileiro")
 st.markdown(
     f''
-    'Análise de ~480 mil empresas de software com base nos dados abertos da Receita Federal do Brasil. '
-    'Projeto de extensão acadêmica — Estruture Negócios | UFPB 2026.'
+    'Análise de ~480 mil empresas de software com base nos dados abertos da Receita Federal do Brasil.'
     '',
     unsafe_allow_html=True,
 )
