@@ -58,7 +58,7 @@ if df_f.empty:
     st.stop()
 
 st.markdown("---")
-st.subheader("Sobrevivência por coorte de abertura", anchor=False)
+st.subheader("Sobrevivência por corte de abertura", anchor=False)
 
 fig_surv = go.Figure()
 for regiao in reg_sel:
